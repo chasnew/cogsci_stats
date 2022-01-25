@@ -143,4 +143,4 @@ four.ds %>%
             corr_xy = cor(x, y))
 ```
 
-All datasets have the same values of summary statistics including mean of x, standard deviation of x, mean of y, standard deviation of y, and the correlation between x and y.
+All datasets have the same (or near identical) values of summary statistics including mean of x, standard deviation of x, mean of y, standard deviation of y, and the correlation between x and y.
