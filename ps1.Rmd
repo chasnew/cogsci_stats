@@ -1,0 +1,146 @@
+---
+title: "Problem set 1"
+author: "Chanuwas (New) Aswamenakul"
+output:
+  pdf_document: 
+    df_print: kable
+  html_document: 
+    df_print: kable
+---
+
+```{r}
+# import library
+library(tidyverse)
+```
+
+# Problem 1
+As part of the tidyverse library, you have access to several datasets. For this problem, load the starwars dataset which contains information about a bunch of star wars characters.
+
+a) Create a data frame with only the species Human and Droid and only the following columns: name, species, birth_year, homeworld. Arrange according to age (decreasing) and rename the column name to person.
+
+```{r}
+starwars %>% 
+  filter(species == "Human" | species == "Droid") %>% 
+  select(name, species, birth_year, homeworld) %>% 
+  arrange(desc(birth_year)) %>% 
+  rename(person = name)
+```
+
+b) Compute the body mass index for masculine characters who are human (only) and arrange the data frame starting with the highest body mass index.
+
+```{r}
+starwars %>% 
+  filter(species == "Human", gender == "masculine") %>% 
+  select(name, mass) %>% 
+  arrange(desc(mass))
+```
+
+c) Find out what the average height and mass (as well as the standard deviation) is from different species in different homeworlds. Why is the standard deviation NA for many groups?
+
+```{r}
+starwars %>% 
+  group_by(species, homeworld) %>% 
+  summarize(avg_h = mean(height), sd_h = sd(height),
+            avg_m = mean(mass), sd_m = sd(mass),
+            count = n())
+```
+
+The reason that many groups have NA value for standard deviation is because there is only one member for those groups. As a result, standard deviation can't be calculated.
+
+d) Who is the tallest member of each species? What eye color do they have?
+
+```{r}
+starwars %>% 
+  group_by(species) %>% 
+  slice(which.max(height)) %>% 
+  select(name, height, eye_color)
+```
+
+e) Create a new dataframe with a column that contains all the unique species names from the starwars dataframe and another column with ‘has force’ and ‘lacks force’ alternating across rows.
+
+```{r}
+# extract unique species
+unique.species <- starwars$species %>% 
+  unique()
+
+# the number of unique species
+species.len <- length(unique.species)
+
+# creating a new dataframe
+new.df <- data.frame(species = unique.species)
+
+if (species.len %% 2 == 0) {
+  new.df$force <- rep(c("has force", "lacks force"), times = species.len/2)
+} else {
+  new.df$force <- c(rep(c("has force", "lacks force"), times = floor(species.len/2)), "has force")
+}
+
+new.df
+```
+
+f) Add the new information from e) to the main dataframe with a join and get the average mass of force havers vs force lackers.
+
+```{r}
+ext.starwars <- starwars %>% 
+  left_join(new.df, by = "species")
+
+ext.starwars %>% 
+  group_by(force) %>% 
+  summarize(avg_mass = mean(mass, na.rm = TRUE))
+```
+
+g) Make a scatterplot of the average heights of force lackers vs. force havers grouped by eye color (i.e., one point per eye color). To examine whether force lackers or force havers are taller on average, put the height of force havers on the x-axis and the height of force lackers on the y-axis and draw a straight line through the origin with slope = 1. (Hint: try pivoting)
+
+What can you say about the relative heights of force havers and force lackers? Do you notice anything
+missing from the graph?
+
+```{r}
+force.heights <- ext.starwars %>% 
+  group_by(force, eye_color) %>% 
+  summarize(avg_h = mean(height, na.rm = TRUE))
+
+force.heights %>% 
+  pivot_wider(names_from = force, values_from = avg_h) %>% 
+  rename(has_force = "has force", lacks_force = "lacks force") %>% 
+  ggplot(aes(x = has_force, y = lacks_force)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1)
+```
+There are no distinct patterns in relative heights between force lackers and force havers. However, there are less data points being visualized in the graph than what actually exists in the dataframe. This is because some eye colors exist only among either force havers or force lackers.
+
+# Problem 2
+
+a) Read in the dataset called four_datasets.csv
+It contains 4 datasets (A,B,C,D) and x and y values for each.
+
+```{r}
+four.ds <- read.csv(file.path("data", "four_datasets.csv"))
+four.ds %>% str()
+```
+
+b) Using facet_wrap() make a figure with 4 scatterplots, one for each dataset.
+
+```{r}
+four.ds %>% 
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  facet_wrap(~ dataset, nrow = 2)
+```
+
+c) For each dataset, get:
+    * the mean of x
+    * the mean of y
+    * the standard deviation of x
+    * the standard deviation of y
+    * the correlation of x and y (using cor())
+What do you observe?
+
+```{r}
+four.ds %>% 
+  group_by(dataset) %>% 
+  summarize(mean_x = mean(x), sd_x = sd(x),
+            mean_y = mean(y), sd_y = sd(y),
+            corr_xy = cor(x, y))
+```
+
+All datasets have the same values of summary statistics including mean of x, standard deviation of x, mean of y, standard deviation of y, and the correlation between x and y.
