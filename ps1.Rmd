@@ -89,8 +89,7 @@ ext.starwars %>%
   summarize(avg_mass = mean(mass, na.rm = TRUE))
 ```
 
-g) Make a scatterplot of the average heights of force lackers vs. force havers grouped by eye color (i.e., one point per eye color). To examine whether force lackers or force havers are taller on average, put the height of force havers on the x-axis and the height of force lackers on the y-axis and draw a straight line through the origin with slope = 1. (Hint: try pivoting)
-
+g) Make a scatterplot of the average heights of force lackers vs. force havers grouped by eye color (i.e., one point per eye color). To examine whether force lackers or force havers are taller on average, put the height of force havers on the x-axis and the height of force lackers on the y-axis and draw a straight line through the origin with slope = 1. (Hint: try pivoting)  
 What can you say about the relative heights of force havers and force lackers? Do you notice anything
 missing from the graph?
 
