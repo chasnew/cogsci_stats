@@ -1,0 +1,129 @@
+---
+title: "Problem set 2"
+author: "Chanuwas (New) Aswamenakul"
+date: "1/29/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# import library
+library(tidyverse)
+```
+
+# Problem 1
+Detectives in San Francisco (whose population we’ll assume to be 1 million) are working on a crime scene
+and have put together a description of the perpetrator, based on things such as height, a tattoo, a limp, an
+earring etc. Let’s assume that only one person in 10,000 fits the description. On a routine patrol the next
+day, police officers see a person fitting the description. They arrest him and he is brought to trial based
+solely on the fact that he fits the description.
+
+The prosecutor says that since only one person in 10,000 fits the description, it is highly unlikely that an
+innocent person fits the description; it is therefore highly unlikely that the defendant is innocent. If you
+were a member of the jury, would you cast a “guilty” vote or is the prosecutor wrong? In either case, explain
+your reasoning.
+
+**Answer:** I would not cast a "guilty" vote because a mere description of the perpetrator is a weak evidence that the defendant is actually a perpetrator. And the consequences of persecuting an innocent defendant can be severe. On the probability side, if 1 person in 10,000 fits the description in the population of 1 million, that means there are 1,000,000/10,000 = 100 people who fit the description. This means that the probability of the defendant being innocent given the defendant fits the description is 99/100 = 0.99, which is highly likely. Hence, the probabilistic reasoning of the prosecutor that "it is highly unlikely that an
+innocent person fits the description" is flawed.
+
+# Problem 2
+
+An example from corpus/historical linguistics: In historical English, object noun phrases could appear both preverbally (e.g., “So that they could their foes overcome. . . .” ) and postverbally (e.g., “So that they could overcome their foes. . . .” ).
+There is also a broad cross-linguistic tendency for pronominal objects to occur earlier on average than non-pronominal objects.
+Let’s define two variables:
+  * X : verb-object word order ( Preverbal or Postverbal object)
+  * Y : object pronominality ( Pronoun or Not Pronoun).
+Here is what you know about their conditional and marginal probabilities:
+
+$$
+\begin{aligned}
+P(Y &= Pronoun) = 0.238 \\
+P(X &= Preverbial|Y = Pronoun) = 0.941 \\
+P(X &= Preverbial|Y = Not\ Pronoun) = 0.860
+\end{aligned}
+$$
+
+Imagine you’re an incremental sentence processor (i.e., you are reading a sentence one word at a time and anticipating what comes next). You encounter a verb but haven’t encountered the object yet. How likely is it that the object is a pronoun? (Show every step of your calculation)
+
+**Answer:**
+
+$$
+\begin{aligned}
+P(X &= Not\ Pronoun) = 1 - P(X = Pronoun) = 1 - 0.238 = 0.762 \\
+P(X &= Postverbial|Y = Pronoun) = 1 - P(X = Preverbial|Y = Pronoun) = 1 - 0.941 = 0.059 \\
+P(X &= Postverbial|Y = Not\ Pronoun) = 1 - P(X = Preverbial|Y = Not\ Pronoun) = 1 - 0.860 = 0.140 \\
+P(X &= Postverbial) = (P(X = Postverbial|Y = Pronoun) \times P(Y = Pronoun)) \\
+&+ (P(X = Postverbial|Y = Not\ Pronoun) \times P(Y = Not\ Pronoun)) \\
+P(X &= Postverbial) = (0.059 \times 0.238)+(0.140 \times 0.762) = 0.121
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+P(Y = Pronoun|X = Postverbial) &= \frac{P(X = Postverbial|Y = Pronoun) \times P(Y = Pronoun)}
+{P(X = Postverbial)} \\
+&= \frac{0.059 \times 0.238}{0.121} \\
+&= 0.116
+\end{aligned}
+$$
+
+# Problem 3
+
+You will explore a data set of English words with lexical decision time data and other measures like written and spoken frequency. Lexical decision time is an important behavioral measure in language research. In a lexical decision task, a subject is presented with a word (or non-word like “gnuppet”) and asked to judge as quickly as possible whether or not it is a word. How fast they can make a decision reflects something about the cognitive response of the subject to the word in question.
+
+a. Download rts.csv and read in the data as a data frame. RTlexdec is the (log transformed) lexical decision time in seconds for each data point in the data frame. Other relevant columns will be defined below.
+
+```{r}
+rt.df <- read_csv(file.path("data", "rts.csv"))
+```
+
+b. Plot a histogram to look at the distribution of lexical decision RT’s in the data set. Make sure the number of bins is such that you can clearly see the distribution. Do the RT’s appear to be normally distributed? How many ‘peaks’ are there in the distribution?
+
+```{r}
+rt.df %>% 
+  ggplot(aes(x = RTlexdec)) +
+  geom_histogram(bins = 100)
+```
+
+The distribution of reaction time is not normally distributed because it has 2 peaks.
+
+c. What is the overall mean and the overall standard deviation for RTlexdec?
+
+```{r}
+rt.mean <- mean(rt.df$RTlexdec)
+rt.sd <- sd(rt.df$RTlexdec)
+```
+
+The overall mean of RT = `r rt.mean` \
+The overall standard deviation of RT = `r rt.sd`
+
+d. Make a new dataframe containing only words for which VerbFrequency and NounFrequency are greater than 0. How many data points were there originally in the dataset and how many does this eliminate from the original data frame? How is the mean RT affected and why?
+
+```{r}
+rt.filtered <- rt.df %>% 
+  filter(NounFrequency > 0, VerbFrequency > 0)
+
+rt.filtered %>%
+  summarize(rt.mean = mean(RTlexdec), rt.sd = sd(RTlexdec))
+
+rt.filtered %>% 
+  ggplot(aes(x = RTlexdec)) +
+  geom_histogram(bins = 100)
+```
+The original dataframe has `r nrow(rt.df)` \
+The number of row that's eliminated is `r nrow(rt.df) - nrow(rt.filtered)`
+
+The mean and standard deviation slightly decrease. This is because ...
+
+e. What has a lower mean RTlexdec: nouns or verbs? What are the means? Find the log ratio $log(A/B)$ of the NounFrequency and VerbFrequency and add it as a column called NounVerbFreqRatio. Did this step produce any NAs?
+
+```{r}
+
+```
+
+f. In the new dataset where you’ve filtered out frequencies with 0 values, plot and compute the correlations between RTlexdec and each of the following: Familiarity, WrittenFrequency, FamilySize, NounVerbFreqRatio. Which factors are positively correlated with lexical decision reaction time?
+g. Now use facetting to make separate histograms for young and old subjects. What does this reveal about the first histogram? Do the data within each age group look normally distributed? h. Now we want to know how far the lexical decision time for some given words are from the means for the group. To do this, you can use z-transformed values. Add a column to the original data frame containing z-transformed values for RTlexdec. The formula for the z-score is $(x-\mu)/\sigma$, where $x$ is the particular value, $\mu$ is the mean value, and $\sigma$ is the standard deviation. Estimate z-scores separately for each of the two possible AgeSubject categories. That is, for each word, calculate one z-score using the mean and standard deviation for young people and one using the mean and standard deviation for old people. Give z-scores for the words “sluice” and “swerve.” There should be two z-scores for each word (one for young and one for old). How do response times to “sluice” and “swerve” compare to the mean in each group?
+i. Using the z scores calculated before for young and old separately, find the words that have the biggest difference between young z score and old z score. List the 3 for which young is biggest relative to old and the 3 for which old is biggest relative to young. What might that mean about these words?
