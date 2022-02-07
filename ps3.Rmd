@@ -1,0 +1,226 @@
+---
+title: "Problem Set 3"
+author: "Chanuwas (New) Aswamenakul"
+date: "2/5/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+# Problem 1
+
+You will use the same dataset of English words with lexical decision times as in the previous problem set.
+
+a) Download rts.csv and read in the data as a data frame. RTlexdec is the (log transformed) lexical decision time for each data point in the data frame. Other relevant columns will be defined below.
+
+```{r}
+rt.df <- read_csv(file.path("data", "rts.csv"))
+rt.df %>% glimpse()
+```
+
+b) How is lexical decision time affected by how long the word is? Calculate the means, standard errors, and 95% confidence intervals for RTlexdec by LengthInLetters. Make a bar graph with LengthInLetters on the x axis, mean RTlexdec on the y-axis, and eror bars plotting the 95% confidence intervals based on the normal approximation (i.e., use the CIs you computed and geom_errorbar rather than stat_summary). Feel free to zoom in on the y-axis between 6 and 7 (not recommended for figures in real analyses). What can you conclude?
+
+```{r}
+rt.summary <- rt.df %>% 
+  group_by(LengthInLetters) %>% 
+  summarize(rt.mean = mean(RTlexdec),
+            rt.sem = sd(RTlexdec)/sqrt(n()),
+            low.ci = rt.mean - 1.96*rt.sem,
+            up.ci = rt.mean + 1.96*rt.sem)
+rt.summary
+
+rt.summary %>%
+  ggplot(aes(x = LengthInLetters, y = rt.mean)) +
+  geom_bar(stat = "identity", color = "grey", fill = "lightgreen") +
+  geom_errorbar(aes(ymin = low.ci, ymax = up.ci), width = .2) +
+  coord_cartesian(ylim = c(6, 7))
+```
+The barplot shows that response times are higher for longer words. However, there's high a high value of standard error for words with length of 2. This is probably because there are few words with length of 2.
+
+c) For all remaining questions, use only the young subject data. That is, filter out the old subjects. Now calculate z-scores for each of the data points. Remember that the z-score is $(x-\mu)/\sigma$. If the data were normally distributed, what percentage of the data would you expect to have a z-score greater than 1.96? Less than -1.96?
+
+```{r}
+rt.young <- rt.df %>% 
+  filter(AgeSubject == "young")
+
+rt.young <- rt.young %>% 
+  mutate(rt.zscore = (RTlexdec - mean(RTlexdec))/sd(RTlexdec))
+```
+
+If the data were normally distributed, we would expect 2.5% of the data to have a z-score greater than 1.96 and another 2.5% of the data to have a z-score less than 1.96.
+
+d) What percentage of the data actually has a z-score above 1.96? What percentage is actually below -1.96? If one of these things is very different from what you expect, why might that be the case?
+
+```{r}
+below.count <- rt.young %>% 
+  filter(rt.zscore < -1.96) %>% 
+  nrow()
+below.perc <- (below.count/nrow(rt.young))*100
+
+above.count <- rt.young %>% 
+  filter(rt.zscore > 1.96) %>% 
+  nrow()
+above.perc <- (above.count/nrow(rt.young))*100
+```
+
+`r above.perc` percentage of the data has a z-score above 1.96. \
+And `r below.perc` percentage of the data has a z-score below 1.96. \
+The reason for this could be because the response time distribution of the young subjects is not normally distributed and is more right-skewed as visualized in the previous problem set.
+
+e) What percentage of words, if the data were normally distributed, would have a z-score higher than 3? Look at the words that DO have a z-score higher than 3. Why do you think they do? It might be helpful to plot the distribution.
+
+```{r}
+above.count3 <- rt.young %>% 
+  filter(rt.zscore > 3) %>% 
+  nrow()
+
+above.perc3 <- (above.count3/nrow(rt.young))*100
+
+rt.young %>% 
+  ggplot(aes(x = rt.zscore)) +
+  geom_histogram()
+```
+If the data were normally distributed, we would expect around 0.2 percentatge of the data to have a z-score higher than 3. But, we observe that `r above.perc3` percentage of the data to have a z-score above 3. By investigating the distribution plot, we can see that the distribution is not normally distributed and is right-skewed. This is probably because there are a some words that subjects take much longer to respond to.
+
+f) Make a boxplot graph showing the RT distribution for words grouped by their initial letter (i.e., one
+box for a, one for b, one for c, etc. )
+
+```{r}
+rt.young <- rt.young %>% 
+  mutate(start.letter = str_sub(Word, start = 1, end = 1))
+
+rt.young %>% 
+  ggplot(aes(x = start.letter, y = RTlexdec, fill = start.letter)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+```
+
+g) Let’s compare the mean RT for words that start with ‘p’ vs all other words. Do a two-sided (i.e., default) t-test on the p-word RT’s vs the other RT’s to see if the difference is significant. Report the
+t-value and the p value, and say whether it is significant given an acceptable Type I error rate of 5%.
+What can we conclude based on this?
+
+```{r}
+rt.young <- rt.young %>% 
+  mutate(start.p = if_else(start.letter == "p", TRUE, FALSE))
+
+t.test(RTlexdec ~ start.p, data = rt.young)
+```
+
+t-value = 1.4815 \
+p-value = 0.1399 \
+Given an acceptable Type I error rate of 5%, we will conclude that the difference in reaction times between words that start with "p" and other words are not statistically significant.
+
+# Problem 2
+
+Here’s a way researchers sometimes plan studies: I want to see if group A differs from group B in cognitive ability X, but I don’t know exactly how to measure X. I’ll collect response time, and accuracy, and time spent on response, and also, since none of those might work out, I’ll collect some measures of IQ and working memory. Something’s got to be significantly different! 
+
+Perhaps you are getting the sense that this is not a great idea, but let’s simulate this situation to see what happens.
+
+a) Simulate how likely you are, on average, to find at least one significant p-value (p < 0.05) across a range of simultaneous testing situations (from 1 test to 20 tests).
+
+```{r}
+# simulate null data with a range of testing situations
+
+sim.n <- 1000
+measure.n <- 1:20
+n <- 100
+
+results <- rep(0, 20)
+
+for (i in measure.n) {
+  
+  sim.result <- c()
+  
+  for (j in 1:sim.n) {
+    
+    p.vector <- c()
+    
+    for (k in 1:i) {
+      # generate data
+      x <- rnorm(n)
+      
+      # t-test
+      test.result <- t.test(x)
+      pval <- test.result$p.value
+      p.vector <- c(p.vector, pval)
+    }
+    
+    # check if there's any significant result
+    sim.result <- c(sim.result, any(p.vector  < 0.05))
+    
+  }
+  
+  # calculate proportion of simulations with at least 1 significant result
+  results[i] <- sum(sim.result)/sim.n
+  
+}
+
+result.df <- data.frame(p.prop = results, measure.n = measure.n)
+```
+
+b) Plot the results of your simulations with number of tests on the x-axis and average rate of rejecting the null (ie., finding at least one significant p-value) on the y-axis. Add a best fit line to summarize the relationship.
+
+```{r}
+result.df %>% 
+  ggplot(aes(x = measure.n, y = p.prop)) +
+  geom_smooth(method="lm") +
+  geom_point()
+```
+
+c) What does this tell us about designing experiments/analyses?
+
+This simulation results show us that as we add more independent outcome measurements to our experiments or analyses, the probability that we'll obtain a statistically significant result increases linearly given a fixed value  of the significant threshold.
+
+d) Now repeat the same simulation but apply a Bonferroni correction to your $\alpha$ level (i.e., divide your p-value cutoff for significance by the number of tests) and plot the results.
+
+```{r}
+# simulate null data with a range of testing situations with a Bonferroni correction
+
+sim.n <- 1000
+measure.n <- 1:20
+n <- 100
+
+results <- rep(0, 20)
+
+for (i in measure.n) {
+  
+  sim.result <- c()
+  
+  for (j in 1:sim.n) {
+    
+    p.vector <- c()
+    
+    for (k in 1:i) {
+      # generate data
+      x <- rnorm(n)
+      
+      # t-test
+      test.result <- t.test(x)
+      pval <- test.result$p.value
+      p.vector <- c(p.vector, pval)
+    }
+    
+    # check if there's any significant result
+    sim.result <- c(sim.result, any(p.vector  < 0.05/i))
+    
+  }
+  
+  # calculate proportion of simulations with at least 1 significant result
+  results[i] <- sum(sim.result)/sim.n
+  
+}
+
+result.df <- data.frame(p.prop = results, measure.n = measure.n)
+
+result.df %>% 
+  ggplot(aes(x = measure.n, y = p.prop)) +
+  geom_smooth(method="lm") +
+  geom_point()
+```
+
