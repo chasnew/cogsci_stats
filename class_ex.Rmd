@@ -1,0 +1,593 @@
+---
+title: "class_exercises"
+author: "Chanuwas (New) Aswamenakul"
+date: "1/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Date: 01/24/2022
+
+## Exercises
+
+```{r}
+# 1. Make a vector of "ten" of all the multiples of 10 up to 200
+a <- seq(from = 10, to = 200, by = 10)
+a
+
+# 2. Find the indices of the numbers divisible by 3
+which(a %% 3 == 0)
+
+# 3. Write a function that takes a vector of numbers as an argument and returns that vectors mean and SD
+bstats_func <- function(nums) {
+  return(list(mean = mean(nums), sd = sd(nums)))
+}
+
+# 4. Use your function to get the mean and SD of tens
+bstats_func(a)
+```
+
+# Date: 01/26/2022
+
+```{r}
+rating.df <- read_csv(file.path("data", "sizeRatingsbySub.csv"))
+rating.df %>% glimpse()
+```
+
+```{r}
+rating.df %>% 
+  mutate(word.length = if_else(str_length(Word) > 4, "long", "short"))
+
+rating.df %>% 
+  group_by(Subject) %>% 
+  mutate(avg.rating.by.subj = mean(Rating))
+```
+
+## Exercises:
+
+```{r}
+# 1. create a new version of the dataset which contains only data for responses to the words: squid, gherkin, mustard
+select.responses <- rating.df %>% 
+  filter(Word %in% c("squid", "gherkin", "mustard"))
+
+select.responses
+```
+
+```{r}
+# 2. Add column to the dataframe that codes whether the word ends with "n"
+rating.df <- rating.df %>% 
+  mutate(endwithn = if_else(str_ends(Word, "n"), TRUE, FALSE))
+
+# 3. Get the mean ratings and counts for words separated by whether they end with "n" or not
+rating.df %>% 
+  group_by(endwithn) %>% 
+  summarize(avg.rating = mean(Rating), count = n())
+```
+
+```{r}
+fam.df <- read_csv(file.path("data", "meanFamiliarityByItem.csv"))
+fam.df %>% glimpse()
+
+joined.df <- rating.df %>% 
+  left_join(fam.df, by = "Word")
+
+joined.df %>% glimpse()
+```
+
+```{r}
+# pivoting example
+joined.df %>% 
+  group_by(Subject, Class) %>% 
+  summarize(avg.rating = mean(Rating)) %>% 
+  pivot_wider(names_from = Class, values_from = avg.rating)
+```
+
+# Date: 01/31/2022
+
+```{r}
+# load diamonds dataset
+df.diamonds <- diamonds
+df.diamonds %>% glimpse()
+```
+
+```{r}
+# summarize data
+df.diamonds.sum <- df.diamonds %>% 
+  group_by(color) %>% 
+  summarize(price.mean = mean(price))
+
+# plot stat summary
+df.diamonds.sum %>% 
+  ggplot(aes(x = color, y = price.mean)) +
+  geom_col()
+
+# plot stat summary without group_by and summarize
+df.diamonds %>% 
+  ggplot(aes(x = color, y = price)) +
+  stat_summary(fun = "mean", geom = "col")
+
+# changing theme
+theme_set(theme_classic() +
+            theme(text = element_text(size = 20)))
+df.diamonds %>% 
+  ggplot(aes(x = color, y = price)) +
+  stat_summary(fun = "mean", geom = "col")
+
+# scatter plot
+df.diamonds %>% 
+  ggplot(aes(x = carat, y = price, color = color)) +
+  geom_point()
+
+# change back to default theme
+theme_set(theme_grey())
+```
+
+## Exercise
+
+```{r}
+# make scatter plot to show the relationship between x = depth and y = table
+df.diamonds %>% 
+  ggplot(aes(x = depth, y = table)) +
+  geom_point()
+```
+
+```{r}
+# fun.args = argument for fun.data (B = bootstrap iteration)
+df.diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "pointrange",
+               fun.args = list(conf.int = .999, B = 2000))
+```
+## Exercise: errorbar
+
+Plot
+y = avg price
+x = clarity
+light blue bars, black outline, add error bars
+
+```{r}
+df.diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) +
+  stat_summary(fun = "mean", geom = "col", color = "black", fill = "lightblue") +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", width = .2) # geom = "linerange" works too
+```
+
+```{r}
+# group data in plot
+df.diamonds %>% 
+  ggplot(aes(x = color,
+             y = price,
+             group = cut,
+             color = cut)) +
+  stat_summary(fun = "mean", geom = "line", size = 1.25)
+```
+
+## Exercise
+add error bar to the above plot
+
+```{r}
+df.diamonds %>% 
+  ggplot(aes(x = color,
+             y = price,
+             group = cut,
+             color = cut)) +
+  stat_summary(fun = "mean", geom = "line", size = 1.25) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", width = .2)
+```
+
+```{r}
+# bar plot with group and errorbars
+df.diamonds %>% 
+  ggplot(aes(x = color, y = price, group = cut, fill = cut)) +
+  stat_summary(fun = "mean", geom = "col", position = position_dodge()) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar",
+               position = position_dodge(.9), width = .2)
+
+# distribution of diamond's width
+df.diamonds %>%
+  ggplot(aes(x = y)) +
+  geom_histogram(bins = 200) +
+  coord_cartesian(xlim = c(3, 10)) # zooming in
+
+# adding color to different diamond color
+df.diamonds %>% 
+  ggplot(aes(x = y, fill = color)) +
+  geom_density(bw = .2, alpha = .3) +
+  coord_cartesian(xlim = c(3, 10))
+
+# adding facets
+df.diamonds %>% 
+  ggplot(aes(x = y, fill = color)) +
+  geom_density(bw = .2) +
+  facet_grid(color~.) +
+  coord_cartesian(xlim = c(3, 10))
+```
+
+## Exercise: facet wrap
+
+scatterplot for the relationship between carat and price for each color using facetting
+
+```{r}
+df.diamonds %>% 
+  ggplot(aes(x = carat, y = price, color = color)) +
+  geom_point() +
+  facet_wrap(color~.)
+```
+# Date: 02/02/2022
+
+```{r}
+df.diamonds %>% 
+  ggplot(aes(x = carat, y = price)) + # global aesthetic
+  geom_point(aes(color = color)) + # local aesthetic
+  geom_smooth(method = "lm", se = FALSE, color = "black")
+
+# jittering points
+df.diamonds %>% 
+  ggplot(aes(x = color, y = price)) +
+  geom_point(alpha = 0.2,
+             position = position_jitter(width = 0.1, height = 0),
+             size = 2)
+
+df.diamonds[1:150,] %>% 
+  ggplot(aes(x = color, y = price)) +
+  geom_point(alpha = 0.2,
+             position = position_jitter(width = 0.1, height = 0),
+             size = 2) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "pointrange", fill = "lightblue", shape = 21)
+```
+
+## Exercise
+
+y = price, x = cut, individual data points, violin, mean
+
+```{r}
+g1 <- df.diamonds %>% 
+  ggplot(aes(x = cut, y = price)) +
+  geom_point(alpha = .3,
+             position = position_jitter(width = .2, height = 0)) +
+  geom_violin(alpha = 0.3) +
+  stat_summary(fun = "mean", geom = "point",
+               color = "red")
+g1
+```
+
+```{r}
+library(ggridges)
+
+g2 <- df.diamonds %>% 
+  ggplot(aes(x = price, y = color)) +
+  ggridges::geom_density_ridges(scale = 1.5)
+g2
+
+# Color brewer helps pick color palette
+g3 <- df.diamonds %>% 
+  ggplot(aes(x = color, y = clarity, z = carat)) +
+  stat_summary_2d(fun = "mean", geom = "tile", color = "black") +
+  scale_fill_gradient(low = "lightyellow", high = "red")
+g3
+
+ggsave(filename = "plot.pdf", plot = g3, width = 8, height = 6)
+```
+
+```{r}
+library(patchwork)
+
+# combining plot
+g1 + (g2 + g3) +
+  plot_layout(ncol = 1) &
+  theme_classic() &
+  theme(plot.tag = element_text(face = "bold", size = 20))
+```
+
+## Distributions
+
+dnorm() = density (not the same as probability for continuous variables)
+pnorm() = cumulative distribution
+qnorm() = quantile function
+rnorm() = generate random values
+
+```{r}
+help("Distributions")
+```
+
+```{r}
+# x = number of positive outcome
+# size = total number of trials
+dbinom(x = 7, size = 10, prob = .7)
+
+x <- 0:10
+p <- dbinom(x, size = 10, prob = .7)
+
+plot(x, p)
+
+# varying parameters
+theta <- seq(from = 0, to = 1, by = 0.01)
+lh <- dbinom(x = 3, size = 10, prob = theta)
+
+plot(theta, lh)
+```
+
+## Exercise: bernoulli
+
+prob = 0.6,
+size = 1
+
+```{r}
+x <- 0:1
+d <- dbinom(x = x, size = 1, prob = 0.6)
+
+plot(x, d)
+```
+
+```{r pqrbinom}
+x <- 0:10
+p <- pbinom(q = x, size = 10, prob = .7)
+
+plot(x, p)
+
+q <- qbinom(p = 0.35, size = 10, prob = .7)
+q
+
+x <- rbinom(n = 1000, size = 10, prob = .7)
+plot(x)
+hist(x)
+```
+
+```{r norm}
+# normal distribution
+dnorm(3.4, m = 0, sd = 1)
+
+x <- seq(from = -5, to = 5, by = 0.1)
+d <- dnorm(x, m = 0, sd = 1)
+
+plot(x, d, type = "line")
+
+x <- seq(from = -5, to = 5, by = 0.1)
+cp <- pnorm(x, m = 0, sd = 1)
+
+plot(x, cp, type = "line")
+
+pnorm(0)
+```
+
+## Exercise: norm
+
+find the probability of an x coming from within 1 SD of the mean, 2 SD, 3 SD
+
+```{r}
+# mean = 0, sd = 1
+pnorm(1) - pnorm(-1)
+pnorm(2) - pnorm(-2)
+pnorm(3) - pnorm(-3)
+```
+
+# Date: 02/07/2022
+
+```{r}
+library(mvtnorm)
+
+x <- seq(from = -5, to = 5, by = .1)
+d <- dnorm(x, m = 0, sd = 1)
+
+qplot(x, d) + geom_line() + 
+  geom_vline(aes(xintercept = 2), color = "red") +
+  geom_vline(aes(xintercept = -2), color = "red")
+```
+
+```{r}
+# p(x < 2)
+pnorm(2, m = 0, sd = 1)
+
+# p(-2 < x < 2)
+pnorm(2, m = 0, sd = 1) - pnorm(-2, m = 0, sd = 1)
+
+# quantile function
+qnorm(0.977)
+
+# random number generation
+rand_nums <- rnorm(2000, 50, 1)
+hist(rand_nums)
+
+mean(rand_nums)
+sd(rand_nums)
+```
+
+## Exercise: t-distribution
+
+- density for a t-distribution with df = 9
+- find critical value corresponding to the 97.5th percentile
+
+```{r}
+x <- seq(-5, 5, by = .1)
+d <- dt(x, df = 9) # density function
+
+qplot(x, d) +
+  geom_line()
+
+# critical value at 97.5th percentile
+qt(0.975, df = 9)
+```
+
+```{r}
+# critical value shrinks as df increases (larger sample size)
+n <- 10:20
+crit.t <- qt(0.975, df = n)
+
+plot(n, crit.t)
+```
+
+## Multivariate normal distribution
+
+```{r}
+# covariance matrix
+sigma <- matrix(c(4, 3, 3, 5), ncol = 2)
+sigma
+
+# multivariate normal
+x <- mvtnorm::rmvnorm(n = 1000, sigma = sigma)
+plot(x)
+
+cor(x)
+rho <- cov2cor(sigma) # convert covariance to correlation
+rho
+sigma[2]/sqrt(sigma[1]*sigma[4])
+
+# using ggplot
+as.data.frame(x) %>% 
+  ggplot(aes(x = V1, y = V2)) +
+  geom_point() +
+  geom_density_2d_filled()
+
+x <- mvtnorm::rmvnorm(n = 1000, mean = c(1,2), sigma = rho)
+as.data.frame(x) %>% 
+  ggplot(aes(x = V1, y = V2)) +
+  geom_point() +
+  geom_density_2d()
+```
+
+## Exercise: multivariate t-dist
+
+- sample 500 points from bivariate t-distribution (df = 9)
+- make a 2d density plot
+
+```{r}
+sigma <- matrix(c(1, 0, 0, 1), ncol = 2)
+x <- mvtnorm::rmvt(500, sigma = sigma, df = 9)
+
+as.data.frame(x) %>% 
+  ggplot(aes(x = V1, y = V2)) +
+  geom_point() +
+  geom_density_2d()
+```
+
+## t-test
+
+```{r}
+d <- tibble(grp1 = rnorm(20, m = 2, sd = 5),
+            grp2 = rnorm(20, m = 5, sd = 5))
+
+d %>% 
+  pivot_longer(cols = everything(), names_to = "grp", values_to = "memory") %>% 
+  ggplot(aes(x = memory, fill = grp)) +
+  geom_histogram(position = position_dodge())
+
+t.test(d$grp1, d$grp2, var.equal = T)
+
+t_value <- (mean(d$grp1) - mean(d$grp2))/(sqrt(var(d$grp1)/length(d$grp1) + var(d$grp2)/length(d$grp2)))
+t_value
+
+2*pt(t_value, df = 38)
+
+t.test(d$grp1, d$grp2, var.equal = T, alternative = "less")
+pt(t_value, df = 38)
+```
+
+## Exercise: t-test
+
+- simulate 2 datasets, n = 50, means = 2 and 5, SDs = 5
+- do t-test by hand
+- write a result sentence
+
+```{r}
+d <- tibble(grp1 = rnorm(50, m = 2, sd = 5),
+            grp2 = rnorm(50, m = 5, sd = 5))
+
+t_value <- (mean(d$grp1) - mean(d$grp2))/(sqrt(var(d$grp1)/length(d$grp1) + var(d$grp2)/length(d$grp2)))
+t_value
+
+2*pt(t_value, df = 98)
+```
+
+Given a critical value of 0.05, the difference in memory performance between two subject groups is not statistically significant (t(98) = -0.513, p = 0.609).
+
+# Date: 02/09/2022
+
+```{r}
+p.values <- rep(NA, length.out = 1000)
+
+for(i in 1:1000) {
+  sample1 = rnorm(20, mean = 2, sd = 3)
+  sample2 = rnorm(20, mean = 5, sd = 3)
+  
+  p <- t.test(sample1, sample2)$p.value
+  p.values[i] = p
+}
+
+ggplot() +
+  geom_histogram(aes(x = p.values), color = "black", binwidth = .01) +
+  coord_cartesian(xlim = c(0, .5))
+```
+
+## p-value distribution of null hypothesis
+
+```{r}
+p.values <- rep(NA, length.out = 1000)
+
+for(i in 1:1000) {
+  sample1 = rnorm(20, mean = 0, sd = 3)
+  sample2 = rnorm(20, mean = 0, sd = 3)
+  
+  p <- t.test(sample1, sample2)$p.value
+  p.values[i] = p
+}
+
+ggplot() +
+  geom_histogram(aes(x = p.values),
+                 color = "black",
+                 fill = "lightgreen",
+                 binwidth = .01)
+```
+
+## statistical power
+Probability of the detecting the effect when it exists
+
+```{r}
+p.values <- rep(NA, length.out = 1000)
+
+for(i in 1:1000) {
+  sample1 = rnorm(45, mean = 20, sd = 5)
+  sample2 = rnorm(45, mean = 23, sd = 5)
+  
+  p <- t.test(sample1, sample2)$p.value
+  p.values[i] = p
+}
+
+mean(p.values < .05)
+```
+
+## Exercise: power with varying sample size
+
+plot power across sample sizes (10 to 100)
+
+```{r}
+sample.sizes <- seq(from = 10, to = 100, by = 10)
+powers <- rep(NA, length.out = 10)
+
+for (i in 1:10) {
+  
+  p.values <- rep(NA, length.out = 1000)
+
+  for (j in 1:1000) {
+    sample1 = rnorm(sample.sizes[i], mean = 20, sd = 5)
+    sample2 = rnorm(sample.sizes[i], mean = 23, sd = 5)
+    
+    p <- t.test(sample1, sample2)$p.value
+    p.values[j] = p
+  }
+  
+  powers[i] <- mean(p.values < .05)
+}
+
+power.df <- data.frame(sample.size = sample.sizes, power = powers)
+
+power.df %>% 
+  ggplot(aes(x = sample.size, y = power)) +
+  geom_point() +
+  geom_line()
+```
+
