@@ -565,10 +565,10 @@ mean(p.values < .05)
 plot power across sample sizes (10 to 100)
 
 ```{r}
-sample.sizes <- seq(from = 10, to = 100, by = 10)
-powers <- rep(NA, length.out = 10)
+sample.sizes <- seq(from = 10, to = 100, by = 5)
+powers <- rep(NA, length.out = 19)
 
-for (i in 1:10) {
+for (i in 1:19) {
   
   p.values <- rep(NA, length.out = 1000)
 
