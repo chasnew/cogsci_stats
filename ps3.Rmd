@@ -135,11 +135,11 @@ results <- rep(0, 20)
 
 for (i in measure.n) {
   
-  sim.result <- c()
+  sim.result <- rep(NA, length.out = sim.n)
   
   for (j in 1:sim.n) {
     
-    p.vector <- c()
+    p.vector <- rep(NA, length.out = i)
     
     for (k in 1:i) {
       # generate data
@@ -148,16 +148,16 @@ for (i in measure.n) {
       # t-test
       test.result <- t.test(x)
       pval <- test.result$p.value
-      p.vector <- c(p.vector, pval)
+      p.vector[k] <- pval
     }
     
     # check if there's any significant result
-    sim.result <- c(sim.result, any(p.vector  < 0.05))
+    sim.result[j] <- any(p.vector  < 0.05)
     
   }
   
   # calculate proportion of simulations with at least 1 significant result
-  results[i] <- sum(sim.result)/sim.n
+  results[i] <- mean(sim.result)
   
 }
 
@@ -190,11 +190,11 @@ results <- rep(0, 20)
 
 for (i in measure.n) {
   
-  sim.result <- c()
+  sim.result <- rep(NA, length.out = sim.n)
   
   for (j in 1:sim.n) {
     
-    p.vector <- c()
+    p.vector <- rep(NA, length.out = i)
     
     for (k in 1:i) {
       # generate data
@@ -203,18 +203,19 @@ for (i in measure.n) {
       # t-test
       test.result <- t.test(x)
       pval <- test.result$p.value
-      p.vector <- c(p.vector, pval)
+      p.vector[k] <- pval
     }
     
     # check if there's any significant result
-    sim.result <- c(sim.result, any(p.vector  < 0.05/i))
+    sim.result[j] <- any(p.vector  < (0.05/i))
     
   }
   
   # calculate proportion of simulations with at least 1 significant result
-  results[i] <- sum(sim.result)/sim.n
+  results[i] <- mean(sim.result)
   
 }
+
 
 result.df <- data.frame(p.prop = results, measure.n = measure.n)
 
