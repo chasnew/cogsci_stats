@@ -112,18 +112,113 @@ rt.filtered %>%
 rt.filtered %>% 
   ggplot(aes(x = RTlexdec)) +
   geom_histogram(bins = 100)
+
+# comparing familiarity of words that are both Noun and Verb with
+# words that are either noun or verb
+
+rt.df %>% 
+  mutate(nv.category = if_else(NounFrequency > 0 & VerbFrequency > 0,
+                               "n.and.v",
+                               "n.or.v")) %>% 
+  group_by(nv.category) %>% 
+  summarize(mean.fam = mean(Familiarity))
 ```
 The original dataframe has `r nrow(rt.df)` \
 The number of row that's eliminated is `r nrow(rt.df) - nrow(rt.filtered)`
 
-The mean and standard deviation slightly decrease. This is because ...
+The mean and standard deviation slightly decrease. This could be because subjects are more familiar with words that appear as both a noun and a verb leading to faster response.
 
 e. What has a lower mean RTlexdec: nouns or verbs? What are the means? Find the log ratio $log(A/B)$ of the NounFrequency and VerbFrequency and add it as a column called NounVerbFreqRatio. Did this step produce any NAs?
 
 ```{r}
+rt.df %>% 
+  group_by(WordCategory) %>% 
+  summarize(rt.mean = mean(RTlexdec))
 
+rt.df <- rt.df %>% 
+  mutate(NounVerbFreqRatio = log(NounFrequency/VerbFrequency))
+
+rt.df$NounVerbFreqRatio %>% 
+  head(10)
 ```
 
+Verbs have slightly lower RTlexdec. The log ratio of NounFreqcy and VerbFrequency doesn't produce NA but produce Inf because some values of VerbFrequency are 0.
+
 f. In the new dataset where you’ve filtered out frequencies with 0 values, plot and compute the correlations between RTlexdec and each of the following: Familiarity, WrittenFrequency, FamilySize, NounVerbFreqRatio. Which factors are positively correlated with lexical decision reaction time?
-g. Now use facetting to make separate histograms for young and old subjects. What does this reveal about the first histogram? Do the data within each age group look normally distributed? h. Now we want to know how far the lexical decision time for some given words are from the means for the group. To do this, you can use z-transformed values. Add a column to the original data frame containing z-transformed values for RTlexdec. The formula for the z-score is $(x-\mu)/\sigma$, where $x$ is the particular value, $\mu$ is the mean value, and $\sigma$ is the standard deviation. Estimate z-scores separately for each of the two possible AgeSubject categories. That is, for each word, calculate one z-score using the mean and standard deviation for young people and one using the mean and standard deviation for old people. Give z-scores for the words “sluice” and “swerve.” There should be two z-scores for each word (one for young and one for old). How do response times to “sluice” and “swerve” compare to the mean in each group?
+
+```{r}
+rt.filtered <- rt.df %>% 
+  filter(NounFrequency > 0, VerbFrequency > 0)
+
+rt.filtered %>% 
+  ggplot(aes(x = RTlexdec, y = Familiarity)) +
+  geom_point() +
+  ggtitle("Relationship between RTlexdec and Familiarity")
+
+rt.filtered %>% 
+  ggplot(aes(x = RTlexdec, y = WrittenFrequency)) +
+  geom_point() +
+  ggtitle("Relationship between RTlexdec and WrittenFrequency")
+
+rt.filtered %>% 
+  ggplot(aes(x = RTlexdec, y = FamilySize)) +
+  geom_point() +
+  ggtitle("Relationship between RTlexdec and FamilySize")
+
+rt.filtered %>% 
+  ggplot(aes(x = RTlexdec, y = NounVerbFreqRatio)) +
+  geom_point() +
+  ggtitle("Relationship between RTlexdec and NounVerbFreqRatio.")
+
+rt.filtered %>% 
+  summarize(rt.famil.cor = cor(RTlexdec, Familiarity),
+            rt.wf.cor = cor(RTlexdec, WrittenFrequency),
+            rt.famsize.cor = cor(RTlexdec, FamilySize),
+            rt.nvfreq.cor = cor(RTlexdec, NounVerbFreqRatio))
+```
+All of the 4 factors **negatively** correlate with reaction time.
+
+g. Now use facetting to make separate histograms for young and old subjects. What does this reveal about the first histogram? Do the data within each age group look normally distributed?
+
+```{r}
+rt.df %>% 
+  ggplot(aes(x = RTlexdec, fill = AgeSubject)) +
+  geom_histogram(bins = 100) +
+  facet_grid(AgeSubject~.)
+```
+
+The reaction time of old subjects are higher than the young subjects on average. Within-group reaction time distributions are right-skewed in both age groups.
+
+h. Now we want to know how far the lexical decision time for some given words are from the means for the group. To do this, you can use z-transformed values. Add a column to the original data frame containing z-transformed values for RTlexdec. The formula for the z-score is $(x-\mu)/\sigma$, where $x$ is the particular value, $\mu$ is the mean value, and $\sigma$ is the standard deviation. Estimate z-scores separately for each of the two possible AgeSubject categories. That is, for each word, calculate one z-score using the mean and standard deviation for young people and one using the mean and standard deviation for old people. Give z-scores for the words “sluice” and “swerve.” There should be two z-scores for each word (one for young and one for old). How do response times to “sluice” and “swerve” compare to the mean in each group?
+
+```{r}
+rtz.df <- rt.df %>% 
+  group_by(AgeSubject) %>% 
+  mutate(rt.age.z = (RTlexdec-mean(RTlexdec))/sd(RTlexdec)) %>% 
+  select(Word, AgeSubject, rt.age.z) %>% 
+  distinct(Word, AgeSubject, .keep_all = TRUE) # Some words are both N and V creating duplicates
+
+rtz.df %>% 
+  filter(Word %in% c("sluice", "swerve"))
+```
+
+Response times to "sluice" are above the means in both groups. However, the response time of young subjects to "swerve" is below the mean of the young subject group while the response time of old subjects to "swerve" is above the mean response time of the old subject group.
+
 i. Using the z scores calculated before for young and old separately, find the words that have the biggest difference between young z score and old z score. List the 3 for which young is biggest relative to old and the 3 for which old is biggest relative to young. What might that mean about these words?
+
+```{r}
+rtz.pivot <- rtz.df %>% 
+  pivot_wider(id_cols = Word, names_from = AgeSubject, values_from = rt.age.z) %>% 
+  mutate(z.diff = old - young)
+
+# young is biggest relative to old
+rtz.pivot %>% 
+  arrange(desc(z.diff)) %>% 
+  head(3)
+
+# old is biggest relative to young
+rtz.pivot %>% 
+  arrange(z.diff) %>% 
+  head(3)
+```
+
