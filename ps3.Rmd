@@ -71,7 +71,7 @@ above.perc <- (above.count/nrow(rt.young))*100
 
 `r above.perc` percentage of the data has a z-score above 1.96. \
 And `r below.perc` percentage of the data has a z-score below 1.96. \
-The reason for this could be because the response time distribution of the young subjects is not normally distributed and is more right-skewed as visualized in the previous problem set.
+The reason for this could be because the response time distribution of the young subjects is not normally distributed and is more right-skewed as visualized in the previous problem set. This could be because reaction time has a minimum value of 0 while the maximum value is infinity in theory.
 
 e) What percentage of words, if the data were normally distributed, would have a z-score higher than 3? Look at the words that DO have a z-score higher than 3. Why do you think they do? It might be helpful to plot the distribution.
 
@@ -85,8 +85,12 @@ above.perc3 <- (above.count3/nrow(rt.young))*100
 rt.young %>% 
   ggplot(aes(x = rt.zscore)) +
   geom_histogram()
+
+rt.young %>% 
+  filter(rt.zscore > 3) %>% 
+  select(Word, rt.zscore)
 ```
-If the data were normally distributed, we would expect around 0.2 percentatge of the data to have a z-score higher than 3. But, we observe that `r above.perc3` percentage of the data to have a z-score above 3. By investigating the distribution plot, we can see that the distribution is not normally distributed and is right-skewed. This is probably because there are a some words that subjects take much longer to respond to.
+If the data were normally distributed, we would expect around 0.2 percentatge of the data to have a z-score higher than 3. But, we observe that `r above.perc3` percentage of the data to have a z-score above 3. By investigating the distribution plot, we can see that the distribution is not normally distributed and is right-skewed. The words that have z-score higher than 3 seem to be uncommon words or non-words making subjects respond slower than usual.
 
 f) Make a boxplot graph showing the RT distribution for words grouped by their initial letter (i.e., one
 box for a, one for b, one for c, etc. )
@@ -139,6 +143,7 @@ for (i in measure.n) {
   
   for (j in 1:sim.n) {
     
+    # store p-value for each round of simulation
     p.vector <- rep(NA, length.out = i)
     
     for (k in 1:i) {
@@ -194,6 +199,7 @@ for (i in measure.n) {
   
   for (j in 1:sim.n) {
     
+    # store p-value for each round of simulation
     p.vector <- rep(NA, length.out = i)
     
     for (k in 1:i) {
