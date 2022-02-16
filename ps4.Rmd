@@ -36,16 +36,20 @@ cat.post <- cat.prior + (subj.n - dog.n)
 
 # 1b
 theta <- seq(0, 1, by = .01)
+post.mean <- dog.post/(dog.post+cat.post)
 cred.int <- qbeta(c(.025, .975), shape1 = dog.post, shape2 = cat.post) %>%
   round(digits = 2)
-cred.int
+
+post.mean # mean of the posterior distribution
+cred.int # 95% credible interval
 
 ggplot() +
   geom_line(aes(x = theta, y = dbeta(theta,
                                      shape1 = dog.post,
                                      shape2 = cat.post))) +
-  geom_vline(xintercept = cred.int[1], color = "blue") +
-  geom_vline(xintercept = cred.int[2], color = "blue") +
+  geom_vline(xintercept = post.mean, color = "#E69F00") +
+  geom_vline(xintercept = cred.int[1], color = "#56B4E9") +
+  geom_vline(xintercept = cred.int[2], color = "#56B4E9") +
   labs(x = "theta", y = "probability density",
        title = "posterior distribution of dog bias with 95% credible interval")
 ```
@@ -73,12 +77,15 @@ posterior <- posterior / sum(posterior)
 # 2b
 samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
 cred.int <- quantile(samples, c(0.025, 0.975))
-cred.int
+
+mean(samples) # mean vallue
+cred.int # 95% credible interval
 
 ggplot() +
   geom_density(aes(x = samples)) +
-  geom_vline(xintercept = cred.int[1], color = "blue") +
-  geom_vline(xintercept = cred.int[2], color = "blue") +
+  geom_vline(xintercept = mean(samples), color = "#E69F00") +
+  geom_vline(xintercept = cred.int[1], color = "#56B4E9") +
+  geom_vline(xintercept = cred.int[2], color = "#56B4E9") +
   labs(x = "theta", y = "probability density",
        title = "probability density of samples from posterior distribution with 95% credible interval")
 ```
