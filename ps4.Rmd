@@ -1,0 +1,85 @@
+---
+title: "Problem Set 4"
+author: "Chanuwas (New) Aswamenakul"
+date: "2/12/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+Imagine that you want to know whether people in Merced implicitly like cats or dogs more. So you develop a task which involves showing participants two pictures on the screen – a cat and a dog. The participants have to pick one or the other by pressing a keyboard key. (Assume the two pictures are matched on all kinds of properties so the only meaningful difference between them is whether they represent a dog or a cat.) Out of 100 participants, 67 picked the dog. 
+
+Using a Bayesian data analysis, characterize the dog-bias of the population of Merced. In other words, use the data you’ve collected and priors that capture your knowledge before seeing the data to find the posterior probability distribution over values of a parameter, $\theta$, which captures the bias to pick ‘dog’ given a binary choice (cat vs. dog), in this particular population.
+
+1) Use the analytical approach, taking advantage of conjugacy, to find the posterior distribution for $\theta$.
+    a) Specify the likelihood and prior you are using.
+    b) Plot the posterior distribution for dog-bias and indicate the mean and 95% credible interval.
+
+```{r}
+# 1a
+
+## prior (I'm a cat person)
+dog.prior <- 1
+cat.prior <- 9
+
+## likelihood
+dog.n <- 67
+subj.n <- 100
+
+## posterior derivation via conjugacy
+dog.post <- dog.prior + dog.n
+cat.post <- cat.prior + (subj.n - dog.n)
+
+# 1b
+theta <- seq(0, 1, by = .01)
+cred.int <- qbeta(c(.025, .975), shape1 = dog.post, shape2 = cat.post) %>%
+  round(digits = 2)
+cred.int
+
+ggplot() +
+  geom_line(aes(x = theta, y = dbeta(theta,
+                                     shape1 = dog.post,
+                                     shape2 = cat.post))) +
+  geom_vline(xintercept = cred.int[1], color = "blue") +
+  geom_vline(xintercept = cred.int[2], color = "blue") +
+  labs(x = "theta", y = "probability density",
+       title = "posterior distribution of dog bias with 95% credible interval")
+```
+
+2) Conduct the same analysis but using a grid approximation approach to find the posterior distribution and sampling to summarize it.
+    a) Specify the likelihood and prior you are using.
+    b) Plot the posterior distribution for dog-bias and indicate the mean and 95% credible interval.
+
+```{r}
+# 2a
+p_grid <- seq(0, 1, by = .01)
+
+## prior
+dog.prior <- 1
+cat.prior <- 9
+theta.prior <- dbeta(p_grid, shape1 = dog.prior, shape2 = cat.prior)
+
+## likelihood
+likelihood <- dbinom(67, size = 100, prob = p_grid)
+
+## posterior
+posterior <- likelihood * theta.prior
+posterior <- posterior / sum(posterior)
+
+# 2b
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
+cred.int <- quantile(samples, c(0.025, 0.975))
+cred.int
+
+ggplot() +
+  geom_density(aes(x = samples)) +
+  geom_vline(xintercept = cred.int[1], color = "blue") +
+  geom_vline(xintercept = cred.int[2], color = "blue") +
+  labs(x = "theta", y = "probability density",
+       title = "probability density of samples from posterior distribution with 95% credible interval")
+```
+
