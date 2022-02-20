@@ -1,0 +1,109 @@
+---
+title: "Problem Set 5"
+author: "Chanuwas (New) Aswamenakul"
+date: "2/19/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+For this problem set and the next, you will use a dataset (erp_data.csv) from an EEG (electroencephalogram) experiment. Participants read sentences while electrical activity was recorded from their scalp. EEG activity time-locked to a specific critical stimulus (e.g., a word) is called an Event-Related Potential (ERP). In the electrophysiology literature, some time windows within ERPs have been associated with specific cognitive computations. For example, the “P600” a positive deflection of the ERP waveform, typically measured between 600 and 800ms after the stimulus, is thought to index some kind of error detection process.
+
+Some of the sentences in this experiment contained errors in the last word (e.g., typos like “He always told a good anecdotes”) and some of them just have words that don’t make sense in the context of the sentence (“He always told a good horse”). The Condition column contains information about what kind of error it is (details not important for our purposes). Mean ERP amplitudes are in the MeanAmp column.
+
+The sentences in this experiment were also given to an independent set of participants who were asked to correct the last word of the sentence if they thought it contained an error. The results of that norming study are in erp_norms.csv. The Intended Completion column counts how many times participants corrected the word to the intended word (e.g., anecdote).
+
+**We want to know if the P600 amplitude is related to the probability that the intended word can be recovered.** To answer this question you will first need to do some data wrangling before you can jump into the analysis.
+
+1) Read in the two datasets erp_data.csv and erp_norms.csv. From erp_data.csv, filter out data from the “n4” time window, leaving only “p6” data. Also filter out trials with artifacts (i.e., trials where the data aren’t good because of blinks or eye-movements) marked as 1 in the artifact column. Finally, keep only data from electrodes that are centro-parietal (where P600 effects are known to be largest from the literature). This includes C3, Cz, C4, CP1, CP2, P3, Pz, and P4.
+
+```{r}
+erp.df <- read_csv(file.path("data", "erp_data.csv"))
+erp.df %>% glimpse()
+
+erp.df <- erp.df %>% 
+  filter(time_window == "p6",
+         artifact != 1,
+         electrode %in% c("C3", "Cz", "C4", "CP1", "CP2", "P3", "Pz", "P4"))
+
+erp.norm <- read_csv(file.path("data", "erp_norms.csv"))
+erp.norm %>% glimpse()
+
+colnames(erp.norm) <- colnames(erp.norm) %>% str_replace(" ", "_")
+```
+
+2) Compute average “p6” amplitudes for each item and each condition.
+
+```{r}
+summarized.erp <- erp.df %>% 
+  group_by(itemNum, condition) %>% 
+  summarize(p6.amp = mean(meanAmp))
+
+summarized.erp
+```
+
+3) In the summarized erp_data, for each item, calculate the difference in amplitude between each of the other three conditions and control. In other words, you will need to pivot to a wide format so that each condition gets a column with amplitude values and subtract the control amplitude from each.
+
+```{r}
+relative.amp <- summarized.erp %>% 
+  pivot_wider(id_cols = itemNum,
+              names_from = condition,
+              values_from = p6.amp) %>% 
+  mutate(Sem = Sem - Control,
+         SemCrit = SemCrit - Control,
+         Synt = Synt - Control)
+
+relative.amp
+```
+
+4) Add a Percent_recovered column to the erp_norms dataframe (dividing Intended word counts by Total Completions)
+
+```{r}
+erp.norm <- erp.norm %>% 
+  mutate(Percent_recovered = Intended_Completion / Total_Completions)
+
+erp.norm
+```
+
+5) Finally, join the norms to the summarized erp data by item number (hint: slightly different column names) and condition. (You may need to pivot back to a longer format first.)
+
+```{r}
+erp.with.norm <- relative.amp %>% 
+  pivot_longer(cols = Control:Synt,
+               names_to = "condition",
+               values_to = "p6.amp") %>% 
+  inner_join(erp.norm, by = c("itemNum" = "Item", "condition" = "Condition"))
+```
+
+6) Plot P600 amplitude (relative to control) by item over Percent_recovered.
+(what does "over Percent_recovered" mean?)
+
+```{r}
+erp.with.norm %>% 
+  ggplot(aes(x = p6.amp, y = Percent_recovered, color = itemNum)) +
+  geom_point()
+```
+
+7) Conduct a linear regression analysis using lm() to address the research question (in bold above).
+
+```{r}
+recov.erp.model <- lm(Percent_recovered ~ p6.amp + condition, data = erp.with.norm)
+summary(recov.erp.model)
+```
+
+8) Comment on the following pitfalls of regression. In other words, if they apply, say how you checked. If they don’t apply say why they don’t apply.
+    1. Non-linearity of the response-predictor relationship(s)
+    2. Non-Normality of the distribution of error terms
+    3. Non-constant variance of error terms
+    4. Correlation of error terms
+    5. Outliers
+    6. High-leverage points
+    7. Collinearity
+
+**Answer**:
+
+9) Summarize the results of your analysis in full sentences (as you would in the results section of a paper).
