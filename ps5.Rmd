@@ -80,30 +80,73 @@ erp.with.norm <- relative.amp %>%
 ```
 
 6) Plot P600 amplitude (relative to control) by item over Percent_recovered.
-(what does "over Percent_recovered" mean?)
 
 ```{r}
 erp.with.norm %>% 
-  ggplot(aes(x = p6.amp, y = Percent_recovered, color = itemNum)) +
+  ggplot(aes(x = Percent_recovered, y = p6.amp)) +
   geom_point()
 ```
 
 7) Conduct a linear regression analysis using lm() to address the research question (in bold above).
 
 ```{r}
-recov.erp.model <- lm(Percent_recovered ~ p6.amp + condition, data = erp.with.norm)
+recov.erp.model <- lm(p6.amp ~ Percent_recovered, data = erp.with.norm)
 summary(recov.erp.model)
 ```
 
 8) Comment on the following pitfalls of regression. In other words, if they apply, say how you checked. If they don’t apply say why they don’t apply.
-    1. Non-linearity of the response-predictor relationship(s)
-    2. Non-Normality of the distribution of error terms
-    3. Non-constant variance of error terms
-    4. Correlation of error terms
-    5. Outliers
-    6. High-leverage points
-    7. Collinearity
 
-**Answer**:
+  8.1 Non-linearity of the response-predictor relationship(s)
+    
+  **Answer**: We can check non-linearity of the response-predictor relationship using a residual plot. If the residuals deviate from 0 systematically, it can be a sign of non-linear relationship between response and predictor variables. The below residual plot shows that it is not the case since we see no discernible pattern.
+    
+```{r}
+plot(recov.erp.model, 1)
+```
+
+  8.2 Non-Normality of the distribution of error terms
+    
+  **Answer**: We can check normality of the distribution of error terms by using a Q-Q plot. If the data mostly fall along 45-degree angle staight line, then the error term is normally distributed. As shown in the plot below, there's no alarming deviation from the normality line.
+    
+```{r}
+plot(recov.erp.model, 2)
+```
+  
+  8.3 Non-constant variance of error terms
+  **Answer**: We can also check non-constant variance of error terms (heteroskedasticity) using a residual plot. If there is higher dispersion of the residuals for certain range of fitted values than other, that indicates that the error terms have non-constant variance. But we don't notice any irregular dispersion of the residuals here.
+  
+```{r}
+plot(recov.erp.model, 1)
+```
+  
+  8.4 Correlation of error terms
+  
+  **Answer**: We can check the correlation of error terms using a residual plot. Because we observe no tracking in the residual plot below. There's no evidence that the error terms are correlated.
+  
+```{r}
+plot(resid(recov.erp.model))
+```
+  
+  8.5 Outliers
+  
+  **Answer**: We can detect outliers by standardizing residuals and check if there are standardized residuals whose values exceed a threshold, which we will use -3 and 3 in this case. From the plot below, there is one data point that is close to the value -3. So, that is a potential outlier.
+  
+```{r}
+plot(recov.erp.model, 5)
+```
+  
+  8.6 High-leverage points
+  
+  **Answer**: We can detect high-leverage points by calculating Cook's distance or leverage statistics. As shown in the plot below, there are a few points that have slightly high values of Cook's distance and leverage statistics relative to the rest of the data. However, those values are still not quite large enough to disproportionately affect the model.
+  
+```{r}
+plot(recov.erp.model, 6)
+```
+  
+  8.7 Collinearity
+  
+  **Answer**: Collinearity is not applicable to our analysis here because we have only one predictor variable.
 
 9) Summarize the results of your analysis in full sentences (as you would in the results section of a paper).
+
+**Answer**: The estimate of linear regression shows that the coefficient of percentage of recovered word is statistically significant and different from zero. Hence, we conclude that P600 amplitude is positively related to the probability that the intended word can be recovered.
