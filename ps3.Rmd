@@ -53,7 +53,7 @@ rt.young <- rt.young %>%
   mutate(rt.zscore = (RTlexdec - mean(RTlexdec))/sd(RTlexdec))
 ```
 
-If the data were normally distributed, we would expect 2.5% of the data to have a z-score greater than 1.96 and another 2.5% of the data to have a z-score less than 1.96.
+If the data were normally distributed, we would expect 2.5% of the data to have a z-score greater than 1.96 and another 2.5% of the data to have a z-score less than -1.96.
 
 d) What percentage of the data actually has a z-score above 1.96? What percentage is actually below -1.96? If one of these things is very different from what you expect, why might that be the case?
 
@@ -90,7 +90,7 @@ rt.young %>%
   filter(rt.zscore > 3) %>% 
   select(Word, rt.zscore)
 ```
-If the data were normally distributed, we would expect around 0.2 percentatge of the data to have a z-score higher than 3. But, we observe that `r above.perc3` percentage of the data to have a z-score above 3. By investigating the distribution plot, we can see that the distribution is not normally distributed and is right-skewed. The words that have z-score higher than 3 seem to be uncommon words or non-words making subjects respond slower than usual.
+If the data were normally distributed, we would expect around 0.25 percentatge of the data to have a z-score higher than 3. But, we observe that `r above.perc3` percentage of the data to have a z-score above 3. By investigating the distribution plot, we can see that the distribution is not normally distributed and is right-skewed. The words that have z-score higher than 3 seem to be uncommon words or non-words making subjects respond slower than usual.
 
 f) Make a boxplot graph showing the RT distribution for words grouped by their initial letter (i.e., one
 box for a, one for b, one for c, etc. )
