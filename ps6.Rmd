@@ -1,0 +1,134 @@
+---
+title: "Problem Set 6"
+author: "Chanuwas (New) Aswamenakul"
+date: "2/26/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(brms)
+library(tidybayes)
+```
+
+Using the same dataset that you wrangled in Problem Set 5, conduct a Bayesian regression analysis to answer the same research question.
+
+```{r}
+# data loading
+erp.df <- read_csv(file.path("data", "erp_data.csv"))
+erp.df %>% glimpse()
+
+erp.df <- erp.df %>% 
+  filter(time_window == "p6",
+         artifact != 1,
+         electrode %in% c("C3", "Cz", "C4", "CP1", "CP2", "P3", "Pz", "P4"))
+
+erp.norm <- read_csv(file.path("data", "erp_norms.csv"))
+erp.norm %>% glimpse()
+
+colnames(erp.norm) <- colnames(erp.norm) %>% str_replace(" ", "_")
+
+# data pre-processing from the previous problem set
+summarized.erp <- erp.df %>% 
+  group_by(itemNum, condition) %>% 
+  summarize(p6.amp = mean(meanAmp))
+
+relative.amp <- summarized.erp %>% 
+  pivot_wider(id_cols = itemNum,
+              names_from = condition,
+              values_from = p6.amp) %>% 
+  mutate(Sem = Sem - Control,
+         SemCrit = SemCrit - Control,
+         Synt = Synt - Control)
+
+erp.norm <- erp.norm %>% 
+  mutate(Percent_recovered = Intended_Completion / Total_Completions)
+
+erp.with.norm <- relative.amp %>% 
+  pivot_longer(cols = Control:Synt,
+               names_to = "condition",
+               values_to = "p6.amp") %>% 
+  inner_join(erp.norm, by = c("itemNum" = "Item", "condition" = "Condition"))
+```
+
+a. Select a prior and likelihood. Justify your prior choice and conduct prior predictive checks to make sure the selected priors support reasonable values of the data given what we know about ERPs (e.g., values outside +/- 50 microvolts are not possible). Use fake data simulation rather than pp_check. (You made need to run prior predictive checks with a few different sets of parameters to figure out the prior specification that makes sense to you.)
+
+With limited prior knowledge, I would assume that the ERP values of different experimental conditions have minimal effect and expect the difference to mostly be below 15. Hence, I'll use a normal distribution with a mean of 0 and the standard deviation of 5 as a prior for the dependent variable. On the other hand, I have a more conservative belief about the relationship between the P600 amplitude and the probability that the intended word is recovered. Therefore, I'll use a normal distribution with a mean of 0 and the standard deviation of 3 for the regression coefficient of the probability that the target word is recovered.
+
+```{r}
+set.seed(314)
+nsamples <- 12
+beta0s <- rnorm(nsamples, mean = 0, sd = 5) # p6.amp Intercept
+beta1s <- rnorm(nsamples, mean = 0, sd = 3) # Percent_recovered
+sigmas <- rexp(nsamples, rate = 1)
+
+percent.recov <- erp.with.norm$Percent_recovered
+
+prior.pred <- tibble(iter = rep(1:nsamples, each = length(percent.recov)),
+                     perc.recov = rep(percent.recov, times = nsamples),
+                     b0 = rep(beta0s, each = length(percent.recov)),
+                     b1 = rep(beta1s, each = length(percent.recov)),
+                     sigma = rep(sigmas, each = length(percent.recov)),
+                     mu = b0 + b1*perc.recov,
+                     RT.pred = rnorm(nsamples*length(percent.recov), mu, sigma))
+
+# distribution of RTlexdec facet wrap by iteration
+prior.pred %>% 
+  ggplot(aes(x = RT.pred)) +
+  geom_histogram(bins = 30) +
+  geom_vline(xintercept = -10, color = "blue") +
+  geom_vline(xintercept = 10, color = "blue") +
+  facet_wrap(~iter) +
+  theme_minimal()
+```
+
+b. Fit the model using brms::brm() and summarize the posterior. Comment on the “health” of the MCMC chains.
+
+```{r message=FALSE}
+erp.brm <- brm(p6.amp ~ 1 + Percent_recovered,
+            data = erp.with.norm,
+            family = gaussian(),
+            prior = c(
+              prior(normal(0, 5), class = Intercept),
+              prior(normal(0, 3), class = b, coef = Percent_recovered),
+              prior(exponential(1), class = sigma)
+              ),
+            iter = 2000,
+            chains = 4,
+            cores = 4,
+            warmup = 1000)
+
+erp.brm
+plot(erp.brm)
+```
+
+The trace plots of posterior distributions show that all of 4 chains largely overlap and hover around the same value indicating that the MCMC chains converge.
+
+c. Conduct posterior predictive checks using the pp_check function.
+
+```{r}
+pp_check(erp.brm, type = "dens_overlay")
+```
+
+The plot shows that the model appropriately fits the data as the posterior samples have close affinity to the likelihood.
+
+d. Summarize the results of your analysis in full sentences (as you would in the results section of a paper).
+
+The posterior distribution shows that P600 amplitude is likely to be positively associated with the probability that the intended word is recovered.
+
+e. Plot P600 amplitude (relative to control) by item over Percent_recovered and overlay 50 fitted regression lines sampled from the posterior.
+
+```{r}
+erp.fitted <- add_epred_draws(erp.with.norm, erp.brm, ndraws = 50)
+
+erp.with.norm %>% 
+  ggplot(aes(x = Percent_recovered, y = p6.amp)) +
+  geom_point(alpha = 0.2) +
+  geom_line(data = erp.fitted, aes(x = Percent_recovered,
+                                   y = .epred,
+                                   group = .draw),
+            size = .5, alpha = .5)
+```
+
